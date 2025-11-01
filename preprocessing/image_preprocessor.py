@@ -51,7 +51,7 @@ class ImagePreprocessor:
     def reduce_noise(self, image: np.ndarray, method: str = 'bilateral') -> np.ndarray:
         """Reduce noise while preserving edges."""
         if method == 'bilateral':
-            return cv2.bilateralFilter(image, 9, 75, 75)
+            return cv2.bilateralFilter(image, 15, 120, 120)
         elif method == 'gaussian':
             return cv2.GaussianBlur(image, (5, 5), 0)
         elif method == 'median':
@@ -64,7 +64,7 @@ class ImagePreprocessor:
         if method == 'adaptive':
             return cv2.adaptiveThreshold(
                 image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                cv2.THRESH_BINARY, 11, 2
+                cv2.THRESH_BINARY, 19, 8
             )
         elif method == 'otsu':
             _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -81,7 +81,7 @@ class ImagePreprocessor:
         cleaned = cv2.medianBlur(image, 5)
         
         # Morphological opening to remove small noise
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_OPEN, kernel)
         
         # Filter out tiny components
