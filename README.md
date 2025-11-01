@@ -2,27 +2,6 @@
 
 Image preprocessing pipeline for handwritten document analysis and OCR preparation.
 
-## Overview
-
-This module provides comprehensive image preprocessing functionality to prepare handwritten documents for optical character recognition (OCR). The pipeline includes contrast enhancement, noise reduction, thresholding, and cleanup operations.
-
-## Project Structure
-
-```
-preprocessing/
-├── __init__.py              # Module exports
-├── image_preprocessor.py    # Main preprocessing pipeline
-├── layout_detector.py       # Text region detection
-├── contour_analyzer.py      # Text line and character analysis
-└── utils.py                 # Helper functions
-
-examples/
-├── preprocessing_demo.py    # Demo script
-└── output/                  # Generated output files
-
-requirements.txt             # Dependencies
-```
-
 ## Core Functions
 
 ### ImagePreprocessor
@@ -98,27 +77,12 @@ Helper functions for common image operations.
 - Returns image properties (dimensions, channels, type)
 - Useful for debugging and analysis
 
-## Usage Example
-
-```python
-from preprocessing import ImagePreprocessor
-
-# Initialize preprocessor
-preprocessor = ImagePreprocessor()
-
-# Process image
-result = preprocessor.preprocess('input.jpg', 'output.jpg')
-
-if result is not None:
-    print("Preprocessing completed successfully")
-```
-
 ## Demo Script
 
 Run the demo to test the preprocessing pipeline:
 
 ```bash
-python examples/preprocessing_demo.py
+python3 examples/preprocessing_demo.py
 ```
 
 **Requirements:**
@@ -133,26 +97,3 @@ Install required packages:
 sudo apt update
 sudo apt install python3-opencv python3-numpy python3-matplotlib python3-pil python3-skimage python3-scipy
 ```
-
-## Pipeline Steps
-
-1. **Load Image** - Read input image file
-2. **Convert to Grayscale** - Prepare for processing
-3. **Enhance Contrast** - Improve text visibility
-4. **Reduce Noise** - Remove artifacts while preserving edges
-5. **Apply Thresholding** - Create binary image
-6. **Clean Binary Image** - Final noise removal and smoothing
-
-## Output
-
-The pipeline produces clean, binary images optimized for OCR processing with:
-- High contrast between text and background
-- Minimal noise and artifacts
-- Preserved text character details
-- Consistent formatting
-
-## Next Steps
-
-- Integrate with EasyOCR for text recognition
-- Test with various handwriting styles
-- Fine-tune parameters for specific use cases
