@@ -1,110 +1,103 @@
 import cv2
 import numpy as np
-from typing import List, Dict, Tuple
+from typing import List, Dict
 from .utils import validate_image
 
 
 class ContourAnalyzer:
-    """Analyze contours for text line and character detection."""
-    
     def __init__(self):
         self.text_lines = []
         self.characters = []
     
-    def find_text_lines(self, image: np.ndarray) -> List[Dict]:
-        """
-        Find individual text lines using horizontal projection.
-        
-        Args:
-            image: Binary image
-            
-        Returns:
-            List of text line dictionaries
-        """
+    def find_text_lines_peaks(self, image: np.ndarray) -> List[Dict]:
         if not validate_image(image):
             return []
         
         height, width = image.shape
-        
-        # Calculate horizontal projection (sum of white pixels per row)
         horizontal_projection = np.sum(image == 255, axis=1)
         
-        # Find line boundaries
+        # Estimate text size from projection data
+        text_rows = np.where(horizontal_projection > 5)[0]
+        if len(text_rows) > 0:
+            total_text_height = text_rows[-1] - text_rows[0] + 1
+            estimated_line_height = total_text_height // 3 * 1.2  # 20% padding
+        else:
+            estimated_line_height = 60  # fallback
+        
+        peaks = []
+        threshold = np.max(horizontal_projection) * 0.6
+        
+        for i in range(10, len(horizontal_projection) - 10):
+            if (horizontal_projection[i] > threshold and
+                horizontal_projection[i] > horizontal_projection[i-8] and
+                horizontal_projection[i] > horizontal_projection[i+8] and
+                horizontal_projection[i] >= horizontal_projection[i-1] and
+                horizontal_projection[i] >= horizontal_projection[i+1]):
+                peaks.append(i)
+        
+        filtered_peaks = []
+        min_distance = int(estimated_line_height * 0.6)  # Dynamic spacing
+        
+        for peak in peaks:
+            if not filtered_peaks or peak - filtered_peaks[-1] >= min_distance:
+                filtered_peaks.append(peak)
+        
         lines = []
-        in_line = False
-        line_start = 0
         
-        # Threshold for detecting text presence
-        threshold = width * 0.02  # At least 2% of row width should have text
-        
-        for i, pixel_count in enumerate(horizontal_projection):
-            if pixel_count > threshold and not in_line:
-                # Start of a line
-                line_start = i
-                in_line = True
-            elif pixel_count <= threshold and in_line:
-                # End of a line
-                line_end = i
-                in_line = False
+        for i, peak in enumerate(filtered_peaks):
+            # Give more space above the line for dots, accents, etc.
+            y_start = max(0, int(peak - estimated_line_height * 0.6))  # 60% above
+            y_end = min(height, int(peak + estimated_line_height * 0.4))  # 40% below
+            
+            # For the last line, extend to the bottom to avoid cutoff
+            if i == len(filtered_peaks) - 1:
+                y_end = height
+            
+            region = image[y_start:y_end, :]
+            rows_with_text = np.where(np.sum(region == 255, axis=1) > 3)[0]
+            cols_with_text = np.where(np.sum(region == 255, axis=0) > 3)[0]
+            
+            if len(rows_with_text) > 0 and len(cols_with_text) > 0:
+                min_row = rows_with_text[0]
+                max_row = rows_with_text[-1]
+                min_col = cols_with_text[0]
+                max_col = cols_with_text[-1]
                 
-                # Add line if substantial enough
-                if line_end - line_start > 5:
-                    lines.append({
-                        'bbox': (0, line_start, width, line_end - line_start),
-                        'y_start': line_start,
-                        'y_end': line_end,
-                        'height': line_end - line_start
-                    })
+                actual_y = y_start + min_row
+                actual_height = max_row - min_row + 1
+                actual_x = min_col
+                actual_width = max_col - min_col + 1
+                
+                lines.append({
+                    'bbox': (actual_x, actual_y, actual_width, actual_height),
+                    'y_start': actual_y,
+                    'y_end': actual_y + actual_height,
+                    'height': actual_height
+                })
         
-        # Handle case where line extends to bottom
-        if in_line:
-            lines.append({
-                'bbox': (0, line_start, width, height - line_start),
-                'y_start': line_start,
-                'y_end': height,
-                'height': height - line_start
-            })
-        
-        self.text_lines = lines
         return lines
     
     def find_character_contours(self, image: np.ndarray) -> List[Dict]:
-        """
-        Find individual character contours.
-        
-        Args:
-            image: Binary image
-            
-        Returns:
-            List of character contour dictionaries
-        """
         if not validate_image(image):
             return []
         
-        # Find all contours
         contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         characters = []
-        min_area = 20  # Minimum area for a character
-        max_area = image.shape[0] * image.shape[1] * 0.1  # Max 10% of image
+        min_area = 20
+        max_area = image.shape[0] * image.shape[1] * 0.1
         
         for contour in contours:
             area = cv2.contourArea(contour)
             
-            # Filter by area
             if area < min_area or area > max_area:
                 continue
             
-            # Get bounding rectangle
             x, y, w, h = cv2.boundingRect(contour)
-            
-            # Filter by aspect ratio (characters shouldn't be too wide or narrow)
             aspect_ratio = w / h
-            if aspect_ratio > 3 or aspect_ratio < 0.1:
-                continue
             
-            # Filter by size (reasonable character dimensions)
-            if w < 3 or h < 5 or w > 200 or h > 200:
+            if (aspect_ratio > 3 or aspect_ratio < 0.1 or
+                w < 3 or h < 5 or w > 200 or h > 200):
                 continue
             
             characters.append({
@@ -114,7 +107,6 @@ class ContourAnalyzer:
                 'center': (x + w//2, y + h//2)
             })
         
-        # Sort characters left to right, top to bottom
         characters.sort(key=lambda char: (char['bbox'][1], char['bbox'][0]))
         self.characters = characters
         

@@ -43,15 +43,18 @@ Detects text regions and layout structure in documents.
 
 ### ContourAnalyzer
 
-Analyzes contours for detailed text structure detection.
+Analyzes contours for detailed text structure detection and line segmentation.
 
-**`find_text_lines(image)`**
-- Detects individual text lines using horizontal projection
-- Returns list of line positions and heights
+**`find_text_lines_peaks(image)`**
+- Detects individual text lines using peak detection in horizontal projection
+- Automatically calculates line height based on text size
+- Returns list of text lines with precise bounding boxes
+- Handles variable spacing and different handwriting sizes
 
 **`find_character_contours(image)`**
-- Finds individual character boundaries
+- Finds individual character boundaries using contour analysis
 - Filters by size and aspect ratio to remove noise
+- Returns sorted character positions for text flow analysis
 
 ### Utils
 
@@ -79,15 +82,26 @@ Helper functions for common image operations.
 
 ## Demo Script
 
-Run the demo to test the preprocessing pipeline:
+Run the demo to test the complete preprocessing and line detection pipeline:
 
 ```bash
 python3 examples/preprocessing_demo.py
 ```
 
+**Features:**
+- Preprocesses handwritten images for optimal OCR readiness
+- Detects and highlights individual text lines with bounding boxes
+- Automatically adapts to different handwriting sizes and layouts
+
 **Requirements:**
 - Place a handwritten image at `examples/sample_images/handwritten_note.jpg`
-- Demo generates processed outputs in `examples/output/`
+- Demo generates processed outputs in `examples/output/`:
+  - `original.jpg` - Original input image
+  - `preprocessed.jpg` - Binary processed image
+  - `lines_detected.jpg` - Image with text line bounding boxes
+
+**Output:**
+The demo will display the number of detected text lines and save visual results showing green bounding boxes around each identified text line.
 
 ## Dependencies
 
