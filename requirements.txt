@@ -4,3 +4,5 @@ matplotlib>=3.7.0
 pillow>=10.0.0
 scikit-image>=0.21.0
 scipy>=1.11.0
+gradio==6.5.1
+gradio_client==2.0.3
