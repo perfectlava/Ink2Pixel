@@ -13,5 +13,4 @@ def ctc_greedy_decode(log_probs, idx2char, blank=0):
                 text += idx2char[t]
             prev = t
         texts.append(text)
-
     return texts
