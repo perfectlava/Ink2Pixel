@@ -1,31 +1,33 @@
 import torch
 from torch.utils.data import Dataset
-import pandas as pd
-from pathlib import Path
+from torchvision import transforms
 
 class OCRDataset(Dataset):
-    def __init__(self, csv_file, tensor_root):
-        self.df = pd.read_csv(csv_file)
-        self.tensor_root = tensor_root
+    def __init__(self, hf_dataset, char_to_idx, transform=None):
+        self.ds = hf_dataset
+        self.char_to_idx = char_to_idx
+        self.transform = transform
 
-        # character set
-        chars = sorted(set("".join(self.df["IDENTITY"])))
-        self.char2idx = {c: i + 1 for i, c in enumerate(chars)}
-        self.char2idx["<blank>"] = 0
-        self.idx2char = {i: c for c, i in self.char2idx.items()}
-        self.chars = chars
+        self.idx2char = {v: k for k, v in char_to_idx.items()}
+
+    def encode(self, text):
+        return torch.tensor(
+            [self.char_to_idx.get(c, 0) for c in text],
+            dtype=torch.long
+        )
 
     def __len__(self):
-        return len(self.df)
+        return len(self.ds)
 
     def __getitem__(self, idx):
-        row = self.df.iloc[idx]
+        sample = self.ds[idx]
 
-        # Lazy load: only load when needed
-        img = torch.load(self.tensor_root / row["FILENAME"].replace(".jpg", ".pt"))
+        image = sample["image"]
+        text = sample["text"]
 
-        label = torch.tensor([self.char2idx[c] for c in row["IDENTITY"]],
-                             dtype=torch.long)
+        if self.transform:
+            image = self.transform(image)
 
-        return img, label
+        label = self.encode(text)
 
+        return image, label
