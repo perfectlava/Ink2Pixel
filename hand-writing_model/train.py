@@ -7,7 +7,6 @@ import time, string
 from pathlib import Path
 
 from learning import TinyOCR
-from decoder import ctc_greedy_decode
 from dataset import OCRDataset
 
 
@@ -76,19 +75,25 @@ def main():
 
     checkpoint_path = CHECKPOINT_DIR / "best.pth"
 
-    if checkpoint_path.exists():
-        checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
-        model.load_state_dict(checkpoint["model"])
-        print("✔ Loaded checkpoint")
-
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
+    best_loss = float("inf")
+
+    if checkpoint_path.exists():
+        checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
+        model.load_state_dict(checkpoint["model"], strict=False)
+        if "optimizer" in checkpoint:
+            try:
+                optimizer.load_state_dict(checkpoint["optimizer"])
+            except Exception:
+                print("⚠ Optimizer state not compatible — starting optimizer fresh")
+
+        best_loss = checkpoint.get("best_loss", float("inf"))
+        print("✔ Loaded checkpoint")
 
     print("Training on", len(dataset), "samples")
 
     # ---------- Training Loop ----------
-    best_loss = float("inf")
-
     for epoch in range(EPOCHS):
 
         model.train()
@@ -129,8 +134,7 @@ def main():
 
             total_loss += loss.item()
 
-            if batch_idx % 100 == 0:
-                print(f"Epoch {epoch} | Batch {batch_idx} | Loss {loss.item():.4f}")
+            # if batch_idx % 100 == 0: print(f"Epoch {epoch} | Batch {batch_idx} | Loss {loss.item():.4f}")
 
         avg_loss = total_loss / len(loader)
 
@@ -144,6 +148,8 @@ def main():
 
             torch.save({
                 "model": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "best_loss": best_loss,
                 "chars": char_to_idx
             }, checkpoint_path)
 

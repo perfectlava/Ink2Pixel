@@ -11,6 +11,12 @@ class OCRDataset(Dataset):
         self.idx2char = {v: k for k, v in char_to_idx.items()}
 
     def encode(self, text):
+        if text is None:
+            return torch.tensor([0], dtype=torch.long)
+
+        if len(text) == 0:
+            return torch.tensor([0], dtype=torch.long)
+
         return torch.tensor(
             [self.char_to_idx.get(c, 0) for c in text],
             dtype=torch.long
