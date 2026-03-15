@@ -1,6 +1,5 @@
 import torch
 from torch.utils.data import Dataset
-from torchvision import transforms
 
 class OCRDataset(Dataset):
     def __init__(self, hf_dataset, char_to_idx, transform=None):
@@ -11,10 +10,7 @@ class OCRDataset(Dataset):
         self.idx2char = {v: k for k, v in char_to_idx.items()}
 
     def encode(self, text):
-        if text is None:
-            return torch.tensor([0], dtype=torch.long)
-
-        if len(text) == 0:
+        if text is None or len(text) == 0:
             return torch.tensor([0], dtype=torch.long)
 
         return torch.tensor(
