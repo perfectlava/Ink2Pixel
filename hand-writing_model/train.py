@@ -9,8 +9,7 @@ from pathlib import Path
 from learning import TinyOCR
 from dataset import OCRDataset
 
-torch.backends.cudnn.benchmark = True
-
+# ---------- Collate Function ----------
 def collate_fn(batch):
     images, labels = zip(*batch)
     images = torch.stack(images)
@@ -18,17 +17,17 @@ def collate_fn(batch):
     labels_concat = torch.cat(labels)
     return images, labels_concat, label_lengths
 
-
+# ---------- Main Training ----------
 def main():
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-    BATCH_SIZE = 32
+    BATCH_SIZE = 16
     EPOCHS = 1
     LR = 3e-4
 
     CHECKPOINT_DIR = Path("checkpoints")
     CHECKPOINT_DIR.mkdir(exist_ok=True)
 
+    # ---------- Dataset ----------
     hf_ds = load_dataset("Teklia/IAM-line")
     train_split = hf_ds["train"]
 
@@ -36,9 +35,10 @@ def main():
     char_to_idx = {c: i + 1 for i, c in enumerate(characters)}
     char_to_idx["<blank>"] = 0
 
+    # ---------- Transform ----------
     transform = transforms.Compose([
         transforms.Grayscale(),
-        transforms.Resize((64, 128)),
+        transforms.Resize((32, 128)),  # original size
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
@@ -50,23 +50,21 @@ def main():
         batch_size=BATCH_SIZE,
         shuffle=True,
         collate_fn=collate_fn,
-        num_workers=4,
+        num_workers=2,
         pin_memory=torch.cuda.is_available()
     )
 
+    # ---------- Model ----------
     model = TinyOCR(len(char_to_idx)).to(DEVICE)
     checkpoint_path = CHECKPOINT_DIR / "best.pth"
 
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
-
-    scaler = torch.amp.GradScaler(device=DEVICE, enabled=(DEVICE == "cuda"))
     best_loss = float("inf")
-    
+
     if checkpoint_path.exists():
         checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
         model.load_state_dict(checkpoint["model"], strict=True)
-
         if "optimizer" in checkpoint:
             try:
                 optimizer.load_state_dict(checkpoint["optimizer"])
@@ -77,9 +75,9 @@ def main():
 
     print("Training on", len(dataset), "samples")
 
+    # ---------- Training Loop ----------
     for epoch in range(EPOCHS):
         model.train()
-
         total_loss = 0
         start_time = time.time()
 
@@ -89,36 +87,18 @@ def main():
             target_lengths = target_lengths.to(DEVICE)
 
             optimizer.zero_grad()
+            outputs = model(images)
+            log_probs = outputs.log_softmax(2)
 
-            with torch.amp.autocast(device_type=DEVICE, enabled=(DEVICE == "cuda")):
-                outputs = model(images)
+            T, B, C = log_probs.shape
+            input_lengths = torch.full((B,), T, dtype=torch.long, device=DEVICE)
 
-                log_probs = outputs.log_softmax(2)
-
-                T, B, C = log_probs.shape
-
-                input_lengths = torch.full(
-                    (B,),
-                    T,
-                    dtype=torch.long,
-                    device=DEVICE
-                )
-
-                loss = criterion(
-                    log_probs,
-                    labels_concat,
-                    input_lengths,
-                    target_lengths
-                )
-
-            scaler.scale(loss).backward()
+            loss = criterion(log_probs, labels_concat, input_lengths, target_lengths)
+            loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
-            scaler.step(optimizer)
-            scaler.update()
+            optimizer.step()
 
             total_loss += loss.item()
-
-            # if batch_idx % 100 == 0: print(batch_idx)
 
         avg_loss = total_loss / len(loader)
         print(f"Epoch {epoch} | Avg Loss {avg_loss:.4f} | Time {(time.time()-start_time)/60:.2f} min")

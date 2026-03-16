@@ -1,8 +1,5 @@
-import torch
-
 def ctc_greedy_decode(log_probs, idx2char, blank=0):
-    preds = log_probs.argmax(2)  # (seq_len, batch)
-
+    preds = log_probs.argmax(2)  # (seq_len, batch, num_classes)
     texts = []
 
     for b in range(preds.size(1)):

@@ -5,38 +5,30 @@ class TinyOCR(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
 
-        # CNN feature extractor
+        # 2-layer CNN
         self.cnn = nn.Sequential(
             nn.Conv2d(1, 64, 3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
+            nn.MaxPool2d(2),  # 64x32x128 -> 64x16x64
 
             nn.Conv2d(64, 128, 3, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-
-            nn.Conv2d(128, 256, 3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2)
+            nn.MaxPool2d(2)   # 128x8x32
         )
 
-        self.cnn_out_channels = 256
-        self.cnn_out_height = 8
-
-        self.rnn_hidden = 256
+        self.rnn_hidden = 128
         self.num_classes = num_classes
 
-        self.layer_norm = nn.LayerNorm(self.cnn_out_channels * self.cnn_out_height)
-
+        # Correct LayerNorm: channels * height after CNN
+        self.layer_norm = nn.LayerNorm(128 * 8)  # 1024
         self.rnn = nn.LSTM(
-            input_size=self.cnn_out_channels * self.cnn_out_height,
+            input_size=128 * 8,  # channels*H after CNN
             hidden_size=self.rnn_hidden,
-            num_layers=3,
+            num_layers=2,
             bidirectional=True,
-            dropout=0.3
+            dropout=0.2
         )
 
         self.fc = nn.Linear(self.rnn_hidden * 2, self.num_classes)
@@ -46,13 +38,14 @@ class TinyOCR(nn.Module):
 
         B, C, H, W = x.size()
 
+        # Prepare for RNN: (seq_len=W, batch=B, features=C*H)
         x = x.permute(3, 0, 1, 2).contiguous()
         x = x.view(W, B, C * H)
 
+        # LayerNorm along features
         x = self.layer_norm(x)
 
         x, _ = self.rnn(x)
-
         x = self.fc(x)
 
         return x
