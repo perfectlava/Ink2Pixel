@@ -13,16 +13,9 @@ torch.backends.cudnn.benchmark = True
 
 def collate_fn(batch):
     images, labels = zip(*batch)
-
     images = torch.stack(images)
-
-    label_lengths = torch.tensor(
-        [len(l) for l in labels],
-        dtype=torch.long
-    )
-
+    label_lengths = torch.tensor([len(l) for l in labels], dtype=torch.long)
     labels_concat = torch.cat(labels)
-
     return images, labels_concat, label_lengths
 
 
@@ -40,7 +33,6 @@ def main():
     train_split = hf_ds["train"]
 
     characters = string.ascii_letters + string.digits + string.punctuation + " "
-
     char_to_idx = {c: i + 1 for i, c in enumerate(characters)}
     char_to_idx["<blank>"] = 0
 
@@ -80,21 +72,18 @@ def main():
                 optimizer.load_state_dict(checkpoint["optimizer"])
             except Exception:
                 print("⚠ Optimizer state not compatible — starting optimizer fresh")
-
         best_loss = checkpoint.get("best_loss", float("inf"))
         print("✔ Loaded checkpoint")
 
     print("Training on", len(dataset), "samples")
 
     for epoch in range(EPOCHS):
-
         model.train()
 
         total_loss = 0
         start_time = time.time()
 
         for batch_idx, (images, labels_concat, target_lengths) in enumerate(loader):
-
             images = images.to(DEVICE)
             labels_concat = labels_concat.to(DEVICE)
             target_lengths = target_lengths.to(DEVICE)
@@ -132,26 +121,19 @@ def main():
             # if batch_idx % 100 == 0: print(batch_idx)
 
         avg_loss = total_loss / len(loader)
-
-        print(
-            f"Epoch {epoch} | Avg Loss {avg_loss:.4f} | "
-            f"Time {(time.time()-start_time)/60:.2f} min"
-        )
+        print(f"Epoch {epoch} | Avg Loss {avg_loss:.4f} | Time {(time.time()-start_time)/60:.2f} min")
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-
             torch.save({
                 "model": model.state_dict(),
                 "optimizer": optimizer.state_dict(),
                 "best_loss": best_loss,
                 "chars": char_to_idx
             }, checkpoint_path)
-
             print("✔ Saved checkpoint")
 
     print("✔ Training finished")
-
 
 if __name__ == "__main__":
     main()

@@ -7,8 +7,6 @@ class OCRDataset(Dataset):
         self.char_to_idx = char_to_idx
         self.transform = transform
 
-        self.idx2char = {v: k for k, v in char_to_idx.items()}
-
     def encode(self, text):
         if text is None or len(text) == 0:
             return torch.tensor([0], dtype=torch.long)
@@ -23,7 +21,6 @@ class OCRDataset(Dataset):
 
     def __getitem__(self, idx):
         sample = self.ds[idx]
-
         image = sample["image"]
         text = sample["text"]
 
