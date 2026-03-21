@@ -9,8 +9,12 @@ class OCRDataset(Dataset):
 
     def encode(self, text):
         if text is None or len(text) == 0:
-            return torch.tensor([0], dtype=torch.long)
-        return torch.tensor([self.char_to_idx.get(c, 0) for c in text], dtype=torch.long)
+            return torch.tensor([self.char_to_idx["<unk>"]], dtype=torch.long)
+
+        return torch.tensor(
+            [self.char_to_idx.get(c, self.char_to_idx["<unk>"]) for c in text],
+            dtype=torch.long
+        )
 
     def __len__(self):
         return len(self.ds)
@@ -25,4 +29,4 @@ class OCRDataset(Dataset):
 
         label = self.encode(text)
 
-        return image, label
+        return image, label, text  # return text for debugging
