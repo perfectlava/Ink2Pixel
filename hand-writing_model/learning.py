@@ -17,19 +17,17 @@ class TinyOCR(nn.Module):
             nn.MaxPool2d(2)
         )
 
-        self.rnn_hidden = 128
-
         self.layer_norm = nn.LayerNorm(128 * 8)
 
         self.rnn = nn.LSTM(
             input_size=128 * 8,
-            hidden_size=self.rnn_hidden,
+            hidden_size=128,
             num_layers=2,
             bidirectional=True,
             dropout=0.2
         )
 
-        self.fc = nn.Linear(self.rnn_hidden * 2, num_classes)
+        self.fc = nn.Linear(128 * 2, num_classes)
 
     def forward(self, x):
         x = self.cnn(x)
