@@ -11,5 +11,3 @@
 - Windows: Double-click `webui.bat`
 - Access: Browser at `http://127.0.0.1:7860`.
 - Usage: Upload image, click Convert for B&W version.
-
-## Next: Add OCR later via EasyOCR integration.
