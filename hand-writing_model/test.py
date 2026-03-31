@@ -11,7 +11,7 @@ NUM_SAMPLES = 50
 
 # ---------- Load checkpoint ----------
 checkpoint = torch.load(CHECKPOINT_PATH, map_location=DEVICE)
-char_to_idx = checkpoint["chars"]
+char_to_idx = checkpoint["char_to_idx"]
 idx_to_char = {v: k for k, v in char_to_idx.items()}
 
 # ---------- Load model ----------
@@ -20,11 +20,12 @@ model.load_state_dict(checkpoint["model"], strict=True)
 model.eval()
 print("✔ Model loaded")
 
-# ---------- Transform ----------
+# ---------- Transform (must match training) ----------
 transform = transforms.Compose([
     transforms.Grayscale(),
-    transforms.Resize((32, 128)),  # original size
+    transforms.Resize(32),
     transforms.ToTensor(),
+    transforms.Lambda(lambda x: x[:, :, :512] if x.shape[-1] > 512 else x),
     transforms.Normalize((0.5,), (0.5,))
 ])
 

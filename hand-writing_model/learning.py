@@ -31,7 +31,6 @@ class TinyOCR(nn.Module):
 
     def forward(self, x):
         x = self.cnn(x)
-
         B, C, H, W = x.size()
 
         # (W, B, C*H)
@@ -42,5 +41,4 @@ class TinyOCR(nn.Module):
 
         x, _ = self.rnn(x)
         x = self.fc(x)
-
         return x

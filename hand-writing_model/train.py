@@ -9,16 +9,13 @@ from learning import TinyOCR
 from dataset import OCRDataset
 from decoder import ctc_greedy_decode
 
-
 # ---------- Collate Function ----------
 def collate_fn(batch):
     images, labels, texts = zip(*batch)
-
     widths = [img.shape[-1] for img in images]
     max_w = max(widths)
 
     padded_images = []
-
     for img in images:
         C, H, W = img.shape
         pad_w = max_w - W
@@ -33,17 +30,15 @@ def collate_fn(batch):
 
     return images, labels_concat, label_lengths, texts
 
-
 # ---------- Main ----------
 def main():
     use_cuda = torch.cuda.is_available()
     DEVICE = "cuda" if use_cuda else "cpu"
     BATCH_SIZE = 32
-    EPOCHS = 30   # 🔥 longer training for better convergence
+    EPOCHS = 4
     LR = 3e-4
     checkpoint_path = "checkpoints/best.pth"
     os.makedirs("checkpoints", exist_ok=True)
-
     torch.backends.cudnn.benchmark = True
 
     # ---------- Dataset ----------
@@ -65,26 +60,20 @@ def main():
     ])
 
     dataset = OCRDataset(train_split, char_to_idx, transform)
-    loader = DataLoader(
-        dataset,
-        batch_size=BATCH_SIZE,
-        shuffle=True,
-        collate_fn=collate_fn,
-        num_workers=2,
-        pin_memory=True
-    )
+    loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True,
+                        collate_fn=collate_fn, num_workers=0, pin_memory=True)
 
     # ---------- Model ----------
     model = TinyOCR(len(char_to_idx)).to(DEVICE)
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
-    scaler = torch.amp.GradScaler(device=DEVICE)  # 🔥 mixed precision
+    scaler = torch.amp.GradScaler(enabled=use_cuda)
 
     # ---------- Load checkpoint ----------
     best_loss = float("inf")
     if os.path.exists(checkpoint_path):
         checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
-        model.load_state_dict(checkpoint["model"], strict=False)
+        model.load_state_dict(checkpoint["model"], strict=True)
         if "optimizer" in checkpoint:
             try:
                 optimizer.load_state_dict(checkpoint["optimizer"])
@@ -93,6 +82,7 @@ def main():
         if "scaler" in checkpoint:
             scaler.load_state_dict(checkpoint["scaler"])
         best_loss = checkpoint.get("best_loss", float("inf"))
+        char_to_idx = checkpoint.get("char_to_idx", char_to_idx)
         print("✔ Loaded checkpoint")
 
     print("Training on", len(dataset), "samples")
@@ -102,44 +92,31 @@ def main():
         model.train()
         total_loss = 0
         start_time = time.time()
-
         scaler = torch.amp.GradScaler(enabled=use_cuda)
+
         for batch_idx, (images, labels_concat, target_lengths, texts) in enumerate(loader):
-            images = images.to(DEVICE, non_blocking=True)
-            labels_concat = labels_concat.to(DEVICE, non_blocking=True)
-            target_lengths = target_lengths.to(DEVICE, non_blocking=True)
-
+            images, labels_concat, target_lengths = images.to(DEVICE), labels_concat.to(DEVICE), target_lengths.to(DEVICE)
             optimizer.zero_grad()
-
             device_type = "cuda" if use_cuda else "cpu"
+
             with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
                 outputs = model(images)
                 log_probs = outputs.log_softmax(2)
-
                 T, B, C = log_probs.shape
                 input_lengths = torch.full((B,), T, dtype=torch.long, device=DEVICE)
-
                 loss = criterion(log_probs, labels_concat, input_lengths, target_lengths)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
-
             total_loss += loss.item()
 
-            # ---------- DEBUG ----------
-            if batch_idx % 200 == 0:
-                decoded = ctc_greedy_decode(log_probs.detach(), idx2char)
-                preds = log_probs.argmax(2)
-                blank_ratio = (preds == 0).float().mean().item()
-                print("\n--- DEBUG ---")
-                print("GT :", texts[0])
-                print("PR :", decoded[0])
-                print("Blank ratio:", blank_ratio)
-                print("----------------")
-
-            if batch_idx % 50 == 0:
-                print(f"Batch {batch_idx} | Loss: {loss.item():.4f}")
+            # if batch_idx % 200 == 0:
+            #     decoded = ctc_greedy_decode(log_probs.detach(), idx2char)
+            #     print("\n--- DEBUG ---")
+            #     print("GT :", texts[0])
+            #     print("PR :", decoded[0])
+            #     print("----------------")
 
         avg_loss = total_loss / len(loader)
         print(f"Epoch {epoch} | Avg Loss {avg_loss:.4f} | Time {(time.time()-start_time)/60:.2f} min")
@@ -152,12 +129,11 @@ def main():
                 "optimizer": optimizer.state_dict(),
                 "scaler": scaler.state_dict(),
                 "best_loss": best_loss,
-                "chars": char_to_idx
+                "char_to_idx": char_to_idx
             }, checkpoint_path)
             print(f"✔ Saved checkpoint (best_loss: {best_loss:.4f})")
 
     print("✔ Training finished")
-
 
 if __name__ == "__main__":
     main()
