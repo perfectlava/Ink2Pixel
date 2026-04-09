@@ -1,3 +1,5 @@
+### https://huggingface.co/datasets/Teklia/IAM-line
+
 import torch
 from torchvision import transforms
 from datasets import load_dataset
@@ -30,7 +32,7 @@ transform = transforms.Compose([
 ])
 
 # ---------- Load dataset ----------
-dataset = load_dataset("Teklia/IAM-line")["test"]
+dataset = load_dataset("Teklia/IAM-line")["validation"]
 print("Testing on", NUM_SAMPLES, "samples\n")
 
 correct = 0
@@ -56,3 +58,5 @@ accuracy = correct / NUM_SAMPLES
 print("-------------")
 print(f"Accuracy: {accuracy:.4f}")
 print(f"Correct: {correct}/{NUM_SAMPLES}")
+
+print("\nDelete extra requirements")

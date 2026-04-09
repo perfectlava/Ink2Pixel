@@ -1,139 +1,122 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from datasets import load_dataset
-from torchvision import transforms
-import time, string, os
+from torchvision import transforms as T
+import string, os
 
 from learning import TinyOCR
 from dataset import OCRDataset
 from decoder import ctc_greedy_decode
+from datasets import load_dataset
 
-# ---------- Collate Function ----------
+from randomize import handwriting_transforms
+
+# ---------- Collate function ----------
 def collate_fn(batch):
     images, labels, texts = zip(*batch)
     widths = [img.shape[-1] for img in images]
     max_w = max(widths)
 
-    padded_images = []
+    padded = []
     for img in images:
         C, H, W = img.shape
-        pad_w = max_w - W
-        if pad_w > 0:
-            pad = torch.zeros((C, H, pad_w))
+        if W < max_w:
+            pad = torch.zeros((C, H, max_w - W), dtype=img.dtype)
             img = torch.cat([img, pad], dim=2)
-        padded_images.append(img)
+        padded.append(img)
 
-    images = torch.stack(padded_images)
-    label_lengths = torch.tensor([len(l) for l in labels], dtype=torch.long)
+    images = torch.stack(padded)
     labels_concat = torch.cat(labels)
+    label_lengths = torch.tensor([len(l) for l in labels], dtype=torch.long)
 
     return images, labels_concat, label_lengths, texts
 
 # ---------- Main ----------
 def main():
-    use_cuda = torch.cuda.is_available()
-    DEVICE = "cuda" if use_cuda else "cpu"
-    BATCH_SIZE = 32
-    EPOCHS = 4
-    LR = 3e-4
-    checkpoint_path = "checkpoints/best.pth"
-    os.makedirs("checkpoints", exist_ok=True)
+    # GPU speedup
     torch.backends.cudnn.benchmark = True
 
-    # ---------- Dataset ----------
-    hf_ds = load_dataset("Teklia/IAM-line")
-    train_split = hf_ds["train"]
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    BATCH_SIZE = 16
+    EPOCHS = 67
+    LR = 1e-3
 
-    characters = string.ascii_letters + string.digits + string.punctuation + " "
-    char_to_idx = {c: i + 2 for i, c in enumerate(characters)}
+    os.makedirs("checkpoints", exist_ok=True)
+    checkpoint_path = "checkpoints/best.pth"
+
+    # ---------- Dataset ----------
+    hf_ds = load_dataset("Teklia/IAM-line")["train"]
+    hf_ds = hf_ds.shuffle(seed=42)
+
+    chars = string.ascii_letters + string.digits + string.punctuation + " "
+    char_to_idx = {c: i + 2 for i, c in enumerate(chars)}
     char_to_idx["<blank>"] = 0
     char_to_idx["<unk>"] = 1
     idx2char = {v: k for k, v in char_to_idx.items()}
 
-    transform = transforms.Compose([
-        transforms.Grayscale(),
-        transforms.Resize(32),
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: x[:, :, :512] if x.shape[-1] > 512 else x),
-        transforms.Normalize((0.5,), (0.5,))
-    ])
-
-    dataset = OCRDataset(train_split, char_to_idx, transform)
-    loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True,
-                        collate_fn=collate_fn, num_workers=0, pin_memory=True)
+    dataset = OCRDataset(hf_ds, char_to_idx, transform=handwriting_transforms)
+    loader = DataLoader(dataset, batch_size=BATCH_SIZE,
+                        shuffle=True, collate_fn=collate_fn,
+                        num_workers=0, pin_memory=True)
 
     # ---------- Model ----------
     model = TinyOCR(len(char_to_idx)).to(DEVICE)
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
-    scaler = torch.amp.GradScaler(enabled=use_cuda)
 
-    # ---------- Load checkpoint ----------
-    best_loss = float("inf")
+    start_epoch = 0
+
+    # ---------- Load checkpoint if exists ----------
     if os.path.exists(checkpoint_path):
         checkpoint = torch.load(checkpoint_path, map_location=DEVICE)
-        model.load_state_dict(checkpoint["model"], strict=True)
-        if "optimizer" in checkpoint:
-            try:
-                optimizer.load_state_dict(checkpoint["optimizer"])
-            except Exception:
-                print("⚠ Optimizer state not compatible — starting optimizer fresh")
-        if "scaler" in checkpoint:
-            scaler.load_state_dict(checkpoint["scaler"])
-        best_loss = checkpoint.get("best_loss", float("inf"))
+        model.load_state_dict(checkpoint["model_state"])
+        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        start_epoch = checkpoint.get("epoch", 0)
         char_to_idx = checkpoint.get("char_to_idx", char_to_idx)
-        print("✔ Loaded checkpoint")
+        print(f"✔ Loaded checkpoint from epoch {start_epoch}")
 
     print("Training on", len(dataset), "samples")
 
     # ---------- Training ----------
-    for epoch in range(EPOCHS):
+    for epoch in range(start_epoch, EPOCHS):
         model.train()
         total_loss = 0
-        start_time = time.time()
-        scaler = torch.amp.GradScaler(enabled=use_cuda)
 
         for batch_idx, (images, labels_concat, target_lengths, texts) in enumerate(loader):
-            images, labels_concat, target_lengths = images.to(DEVICE), labels_concat.to(DEVICE), target_lengths.to(DEVICE)
+            images = images.to(DEVICE)
+            labels_concat = labels_concat.to(DEVICE)
+            target_lengths = target_lengths.to(DEVICE)
+
             optimizer.zero_grad()
-            device_type = "cuda" if use_cuda else "cpu"
+            outputs = model(images)
+            log_probs = outputs.log_softmax(2)
 
-            with torch.amp.autocast(device_type=device_type, enabled=use_cuda):
-                outputs = model(images)
-                log_probs = outputs.log_softmax(2)
-                T, B, C = log_probs.shape
-                input_lengths = torch.full((B,), T, dtype=torch.long, device=DEVICE)
-                loss = criterion(log_probs, labels_concat, input_lengths, target_lengths)
+            T_seq, B, _ = log_probs.shape
+            input_lengths = torch.full((B,), T_seq, dtype=torch.long).to(DEVICE)
 
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
+            loss = criterion(log_probs, labels_concat, input_lengths, target_lengths)
+            loss.backward()
+            optimizer.step()
             total_loss += loss.item()
 
-            # if batch_idx % 200 == 0:
-            #     decoded = ctc_greedy_decode(log_probs.detach(), idx2char)
-            #     print("\n--- DEBUG ---")
-            #     print("GT :", texts[0])
-            #     print("PR :", decoded[0])
-            #     print("----------------")
+            # decode first batch of epoch for quick monitoring
+            if batch_idx == 0:
+                decoded = ctc_greedy_decode(log_probs.detach().cpu(), idx2char)
+                print(f"GT : {texts[0]}")
+                print(f"PR : {decoded[0]}")
+                print(f"Loss: {loss.item():.4f}\n")
 
         avg_loss = total_loss / len(loader)
-        print(f"Epoch {epoch} | Avg Loss {avg_loss:.4f} | Time {(time.time()-start_time)/60:.2f} min")
+        print(f"Epoch {epoch+1}/{EPOCHS} | Avg Loss: {avg_loss:.4f}")
 
-        # ---------- Checkpoint ----------
-        if avg_loss < best_loss:
-            best_loss = avg_loss
-            torch.save({
-                "model": model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "scaler": scaler.state_dict(),
-                "best_loss": best_loss,
-                "char_to_idx": char_to_idx
-            }, checkpoint_path)
-            print(f"✔ Saved checkpoint (best_loss: {best_loss:.4f})")
-
-    print("✔ Training finished")
+    # ---------- Save final model ----------
+    torch.save({
+        "model_state": model.state_dict(),
+        "optimizer_state": optimizer.state_dict(),
+        "epoch": EPOCHS,
+        "char_to_idx": char_to_idx
+    }, checkpoint_path)
+    print("✔ Training complete and final model saved")
 
 if __name__ == "__main__":
     main()

@@ -7,32 +7,21 @@ class OCRDataset(Dataset):
         self.char_to_idx = char_to_idx
         self.transform = transform
 
-        # Pre-encode all labels
-        self.encoded_labels = []
-        self.texts = []
-
-        for sample in self.ds:
-            text = sample["text"] or ""
-            self.texts.append(text)
-
-            # Encode characters
-            encoded = [self.char_to_idx.get(c, 1) for c in text]  # 1 = <unk>
-            if len(encoded) == 0:
-                encoded = [0]  # blank if empty
-
-            self.encoded_labels.append(torch.tensor(encoded, dtype=torch.long))
-
     def __len__(self):
         return len(self.ds)
 
     def __getitem__(self, idx):
         sample = self.ds[idx]
         image = sample["image"]
+        text = sample["text"] or ""
 
         if self.transform:
             image = self.transform(image)
 
-        label = self.encoded_labels[idx]
-        text = self.texts[idx]
+        encoded = [self.char_to_idx.get(c, 1) for c in text]
+        if len(encoded) == 0:
+            encoded = [0]
+
+        label = torch.tensor(encoded, dtype=torch.long)
 
         return image, label, text

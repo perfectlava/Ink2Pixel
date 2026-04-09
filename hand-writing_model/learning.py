@@ -14,10 +14,10 @@ class TinyOCR(nn.Module):
             nn.Conv2d(64, 128, 3, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(),
-            nn.MaxPool2d(2)
-        )
+            nn.MaxPool2d(2),
 
-        self.layer_norm = nn.LayerNorm(128 * 8)
+            nn.Dropout2d(0.2)
+        )
 
         self.rnn = nn.LSTM(
             input_size=128 * 8,
@@ -27,17 +27,14 @@ class TinyOCR(nn.Module):
             dropout=0.2
         )
 
-        self.fc = nn.Linear(128 * 2, num_classes)
+        self.fc = nn.Linear(256, num_classes)
 
     def forward(self, x):
         x = self.cnn(x)
         B, C, H, W = x.size()
 
-        # (W, B, C*H)
         x = x.permute(3, 0, 1, 2).contiguous()
         x = x.view(W, B, C * H)
-
-        x = self.layer_norm(x)
 
         x, _ = self.rnn(x)
         x = self.fc(x)
