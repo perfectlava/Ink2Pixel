@@ -111,3 +111,6 @@ Install required packages:
 sudo apt update
 sudo apt install python3-opencv python3-numpy python3-matplotlib python3-pil python3-skimage python3-scipy
 ```
+
+## Dataset: https://huggingface.co/datasets/Teklia/IAM-line
+## Extra testing dataset: https://www.kaggle.com/datasets/nexdatafrank/14511-images-english-handwriting-ocr-data 

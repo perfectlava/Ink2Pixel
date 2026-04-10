@@ -38,8 +38,8 @@ def main():
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE = 16
-    EPOCHS = 67
-    LR = 1e-3
+    EPOCHS = 85
+    LR = 1e-4
 
     os.makedirs("checkpoints", exist_ok=True)
     checkpoint_path = "checkpoints/best.pth"
@@ -57,7 +57,7 @@ def main():
     dataset = OCRDataset(hf_ds, char_to_idx, transform=handwriting_transforms)
     loader = DataLoader(dataset, batch_size=BATCH_SIZE,
                         shuffle=True, collate_fn=collate_fn,
-                        num_workers=0, pin_memory=True)
+                        num_workers=2, pin_memory=True)
 
     # ---------- Model ----------
     model = TinyOCR(len(char_to_idx)).to(DEVICE)
@@ -100,11 +100,16 @@ def main():
             total_loss += loss.item()
 
             # decode first batch of epoch for quick monitoring
-            if batch_idx == 0:
-                decoded = ctc_greedy_decode(log_probs.detach().cpu(), idx2char)
-                print(f"GT : {texts[0]}")
-                print(f"PR : {decoded[0]}")
-                print(f"Loss: {loss.item():.4f}\n")
+        if epoch % 5 == 0:
+            model.eval()
+            with torch.no_grad():
+                sample_imgs, _, _, sample_texts = next(iter(loader))
+                out = model(sample_imgs[:2].to(DEVICE)).log_softmax(2)
+                decoded = ctc_greedy_decode(out.cpu(), idx2char)
+                for gt, pr in zip(sample_texts[:2], decoded):
+                    print(f"  GT: {gt}")
+                    print(f"  PR: {pr}")
+            model.train()
 
         avg_loss = total_loss / len(loader)
         print(f"Epoch {epoch+1}/{EPOCHS} | Avg Loss: {avg_loss:.4f}")
