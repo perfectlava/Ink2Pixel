@@ -38,7 +38,7 @@ def main():
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     BATCH_SIZE = 16
-    EPOCHS = 85
+    EPOCHS = 110
     LR = 1e-4
 
     os.makedirs("checkpoints", exist_ok=True)
