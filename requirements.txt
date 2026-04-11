@@ -9,3 +9,8 @@ torch>=2.9.1
 torchvision>=0.15.2
 easyocr>=1.7
 datasets>=2.14.0
+gradio==6.5.1
+gradio_client==2.0.3
+pix2tex
+pillow
+numpy
