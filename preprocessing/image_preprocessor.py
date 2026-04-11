@@ -26,10 +26,7 @@ class ImagePreprocessor:
         processed = self.clean_binary_image(processed)
         
         self.processed_image = processed
-        
-        if output_path:
-            save_image(processed, output_path)
-        
+
         return processed
     
     def enhance_contrast(self, image: np.ndarray, method: str = 'clahe') -> np.ndarray:

@@ -1,1 +1,68 @@
-__pycache__
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+build/
+dist/
+
+# =========================
+# Virtual Environments
+# =========================
+venv/
+env/
+.venv/
+ocr_env/
+
+# =========================
+# Jupyter Notebooks
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# Dataset Files (IMPORTANT)
+# =========================
+data/
+datasets/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# =========================
+# Model Weights (VERY IMPORTANT)
+# =========================
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.h5
+
+checkpoints/
+models/
+runs/
+
+# =========================
+# Logs & Experiment Tracking
+# =========================
+logs/
+wandb/
+mlruns/
+tensorboard/
+events.out.tfevents.*
+
+# =========================
+# IDE Files
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
