@@ -13,10 +13,10 @@ dist/
 # =========================
 # Virtual Environments
 # =========================
-venv/
-env/
-.venv/
-ocr_env/
+venv
+env
+.venv
+ocr_env
 
 # =========================
 # Jupyter Notebooks
@@ -33,6 +33,7 @@ datasets/
 *.tar.gz
 *.tgz
 
+
 # =========================
 # Model Weights (VERY IMPORTANT)
 # =========================
@@ -45,6 +46,8 @@ datasets/
 checkpoints/
 models/
 runs/
+hand_writing_model/controlled_images
+hand_writing_model/testing_images
 
 # =========================
 # Logs & Experiment Tracking
