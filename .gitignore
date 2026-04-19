@@ -69,3 +69,12 @@ events.out.tfevents.*
 # =========================
 .DS_Store
 Thumbs.db
+
+
+# =========================
+# Web Files
+# =========================
+.sesskey
+outputs
+uploads
+testing_images

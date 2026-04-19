@@ -3,9 +3,11 @@ import asyncio
 import os
 import json
 import uuid
-import html as html_lib
+# import html as html_lib
 import re
 from pathlib import Path
+from vlm.document_digitizer import DocumentDigitizer
+
 
 # ---------- Storage paths ----------
 UPLOAD_DIR = Path("uploads")
@@ -14,61 +16,44 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 # =============================================================================
-#  VLM INTEGRATION  ── plug your teammate's code in here
+#  VLM INTEGRATION
 # =============================================================================
-#
-#  Your teammate's function receives exactly three things:
-#      1. upload_path — Path to the uploaded image (input)
-#      2. output_type — one of: "markdown" | "html" | "json" | "clean_text" | "latex"
-#      3. output_path — Path where their VLM should WRITE the result file
-#                       (full path, including the correct extension — e.g.
-#                       outputs/abc123.md for markdown)
-#
-#  Their function is responsible for creating the file at output_path. It does
-#  not need to return anything. This app reads the file back for preview + download.
-#
-#  EXAMPLE — edit these two lines to match your teammate's module:
-#
-#      from my_teammates_vlm import transcribe
-#      transcribe(upload_path, output_type, output_path)
-#
-# -----------------------------------------------------------------------------
+
+_digitizer_instance = None
+
+def get_digitizer():
+    global _digitizer_instance
+    if _digitizer_instance is None:
+        print("Initializing VLM into VRAM... (This only happens once on the first upload)")
+        _digitizer_instance = DocumentDigitizer()
+    return _digitizer_instance
 
 def run_vlm(upload_path: Path, output_type: str, output_path: Path) -> None:
-    """Send the uploaded image to the VLM. The VLM writes its result to output_path.
-
-    Args:
-        upload_path: Path to the uploaded image on disk (input to the VLM).
-        output_type: One of "markdown", "html", "json", "clean_text", "latex".
-        output_path: Full path where the VLM should write its output,
-                     already has the correct extension.
-    """
-    # >>> REPLACE THIS BLOCK WITH YOUR TEAMMATE'S VLM CALL <<<
-    #
-    # from my_teammates_vlm import transcribe
-    # transcribe(upload_path, output_type, output_path)
-    # return
-    #
-    # For now this writes a visible placeholder so the UI works end-to-end
-    # before the VLM is hooked in.
-    placeholders = {
-        "markdown":   f"# Placeholder output\n\nThe VLM is not connected yet. "
-                      f"Received file: `{upload_path.name}`\n\n"
-                      f"$$\\sum_{{k=1}}^{{n}} k = \\frac{{n(n+1)}}{{2}}$$\n",
-        "html":       f"<!DOCTYPE html><html><body>"
-                      f"<h1>Placeholder output</h1>"
-                      f"<p>The VLM is not connected yet. "
-                      f"Received file: <code>{html_lib.escape(upload_path.name)}</code></p>"
-                      f"</body></html>",
-        "json":       json.dumps({"status": "stub", "file": upload_path.name,
-                                  "note": "Wire up run_vlm() to your teammate's function."},
-                                 indent=2),
-        "clean_text": f"Placeholder output — VLM not connected yet.\n"
-                      f"Received file: {upload_path.name}\n\n"
-                      f"∑ₖ₌₁ⁿ k = n(n+1)/2",
-        "latex":      r"\sum_{k=1}^{n} k = \frac{n(n+1)}{2}",
+    """Send the uploaded image to the VLM. The VLM writes its result to output_path."""
+    
+    # 1. Load the model lazily on the first request
+    digitizer = get_digitizer()
+    
+    # 2. Map app.py's format names to document_digitizer's expected format codes
+    format_mapping = {
+        "markdown": "md",
+        "html": "html",
+        "json": "json",
+        "clean_text": "txt",
+        "latex": "latex"
     }
-    output_path.write_text(placeholders.get(output_type, ""), encoding="utf-8")
+    target_format = format_mapping.get(output_type, "md")
+    
+    # 3. The digitizer's _export_document method automatically appends the file extension.
+    # We need to strip the extension from output_path so we don't end up with file.md.md
+    base_output_path = str(output_path.with_suffix(""))
+    
+    # 4. Run the inference and save
+    digitizer.process_and_save(
+        image_path=str(upload_path),
+        output_path=base_output_path,
+        output_format=target_format
+    )
 
 # =============================================================================
 
