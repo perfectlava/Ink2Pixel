@@ -1875,7 +1875,7 @@ def upload_page():
         ),
         Div(
             P(
-                "Experimental tool — do not upload sensitive or private documents. Results may vary, "
+                "Experimental tool — Results may vary, "
                 "and the VLM path is still learning its way around unusual notation."
             ),
             cls="warning-box",
@@ -2089,4 +2089,4 @@ def get(doc_id: str, fmt: str):
 
 
 if __name__ == "__main__":
-    serve()
+    uvicorn.run(app, host='0.0.0.0', port=8000)
