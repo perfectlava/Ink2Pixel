@@ -6,22 +6,22 @@ Ink2Pixel is a premium document digitization platform that bridges the gap betwe
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-- **🧠 VLM-Powered Transcription**: Leverages Qwen2.5-VL for high-fidelity extraction of text and math, even from challenging handwriting.
-- **🔢 Mathematical Excellence**: Native support for LaTeX math environments, ensuring formulas are preserved with academic precision.
-- **📄 Multi-Format Export**: Digitized content can be exported as:
+- **VLM-Powered Transcription**: Leverages Qwen2.5-VL for high-fidelity extraction of text and math, even from challenging handwriting.
+- **Mathematical Excellence**: Native support for LaTeX math environments, ensuring formulas are preserved with academic precision.
+- **Multi-Format Export**: Digitized content can be exported as:
   - **Markdown** (`.md`)
   - **LaTeX** (`.tex`)
   - **HTML** (`.html`)
   - **JSON** (`.json`)
   - **Microsoft Word** (`.docx`)
-- **⚡ Modern FastHTML Interface**: A responsive, high-performance web UI designed for speed and clarity.
-- **📚 PDF Support**: Process multi-page documents with automatic page break handling.
+- **Modern FastHTML Interface**: A responsive, high-performance web UI designed for speed and clarity.
+- **PDF Support**: Process multi-page documents with automatic page break handling.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. System Requirements
 
@@ -54,13 +54,13 @@ Choose the runner for your operating system:
 - **macOS/Linux**: Double-click `run_app.sh`
 - **Windows**: Double-click `run_app.bat`
 
-**🔒 Privacy & Cleanup**: Your data never leaves your machine. For extra security, Ink2Pixel automatically deletes all files in the `uploads/` and `outputs/` folders whenever the application is closed.
+**Privacy & Cleanup**: Your data never leaves your machine. For extra security, Ink2Pixel automatically deletes all files in the `uploads/` and `outputs/` folders whenever the application is closed.
 
-**🌐 Automated Access**: Your default web browser will open automatically to `http://localhost:8000` once the server is ready.
+**Automated Access**: Your default web browser will open automatically to `http://localhost:8000` once the server is ready.
 
 ---
 
-## 🛠️ Project Structure
+## Project Structure
 
 - `app.py`: The main FastHTML application and web interface.
 - `vlm/document_digitizer.py`: The core engine handling model loading and inference.
@@ -69,7 +69,7 @@ Choose the runner for your operating system:
 
 ---
 
-## 🏗️ Technology Stack
+## Technology Stack
 
 - **Core**: Python
 - **Frontend**: [FastHTML](https://fasthtml.answer.ai/) & HTMX
@@ -80,7 +80,7 @@ Choose the runner for your operating system:
 
 ---
 
-## 📝 License
+## License
 
 This project is intended for research and personal digitization. Please refer to the Qwen2.5-VL model license for usage terms related to the underlying VLM.
 
