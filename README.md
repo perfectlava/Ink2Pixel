@@ -1,116 +1,71 @@
-# Ink2Pixel Preprocessing
+# Ink2Pixel
 
-Image preprocessing pipeline for handwritten document analysis and OCR preparation.
+**Transform Handwriting into Structured Digital Content with State-of-the-Art Vision Language Models.**
 
-## Core Functions
+Ink2Pixel is a premium document digitization platform that bridges the gap between physical ink and digital pixels. Powered by the **Qwen2.5-VL** vision-language model, it accurately transcribes complex handwritten notes, mathematical formulas, and structured documents into clean, editable formats.
 
-### ImagePreprocessor
+---
 
-Main preprocessing class that handles the complete image processing pipeline.
+## ✨ Key Features
 
-**`preprocess(image_path, output_path=None)`**
-- Runs the complete preprocessing pipeline
-- Loads image, applies contrast enhancement, noise reduction, thresholding, and cleanup
-- Returns binary image ready for OCR
+- **🧠 VLM-Powered Transcription**: Leverages Qwen2.5-VL for high-fidelity extraction of text and math, even from challenging handwriting.
+- **🔢 Mathematical Excellence**: Native support for LaTeX math environments, ensuring formulas are preserved with academic precision.
+- **📄 Multi-Format Export**: Digitized content can be exported as:
+  - **Markdown** (`.md`)
+  - **LaTeX** (`.tex`)
+  - **HTML** (`.html`)
+  - **JSON** (`.json`)
+  - **Microsoft Word** (`.docx`)
+- **⚡ Modern FastHTML Interface**: A responsive, high-performance web UI designed for speed and clarity.
+- **📚 PDF Support**: Process multi-page documents with automatic page break handling.
 
-**`enhance_contrast(image, method='clahe')`**
-- Improves image contrast using CLAHE, histogram equalization, or gamma correction
-- CLAHE (default) provides adaptive contrast enhancement
+---
 
-**`reduce_noise(image, method='bilateral')`**
-- Reduces image noise while preserving edges
-- Bilateral filtering (default) maintains text sharpness
+## 🚀 Quick Start
 
-**`apply_threshold(image, method='adaptive')`**
-- Converts grayscale to binary image
-- Adaptive thresholding (default) handles varying lighting conditions
+### 1. Prerequisites
+- Python 3.9+
+- NVIDIA GPU (recommended for 4-bit quantization via `bitsandbytes`)
+- [Pandoc](https://pandoc.org/) (required for `.docx` conversion)
 
-**`clean_binary_image(image)`**
-- Removes noise from binary images
-- Uses median filtering, morphological operations, and component analysis
-
-### LayoutDetector
-
-Detects text regions and layout structure in documents.
-
-**`find_text_regions(image)`**
-- Finds text blocks in the image using contour analysis
-- Returns list of regions with bounding boxes and areas
-
-**`get_text_area_roi(image, padding=20)`**
-- Extracts main text area excluding margins
-- Returns cropped image focused on text content
-
-### ContourAnalyzer
-
-Analyzes contours for detailed text structure detection and line segmentation.
-
-**`find_text_lines_peaks(image)`**
-- Detects individual text lines using peak detection in horizontal projection
-- Automatically calculates line height based on text size
-- Returns list of text lines with precise bounding boxes
-- Handles variable spacing and different handwriting sizes
-
-**`find_character_contours(image)`**
-- Finds individual character boundaries using contour analysis
-- Filters by size and aspect ratio to remove noise
-- Returns sorted character positions for text flow analysis
-
-### Utils
-
-Helper functions for common image operations.
-
-**`load_image(image_path, color_mode='color')`**
-- Loads images from file with error handling
-- Supports color, grayscale, and unchanged modes
-
-**`save_image(image, output_path)`**
-- Saves images to file with directory creation
-- Returns success/failure status
-
-**`validate_image(image)`**
-- Checks if image is valid for processing
-- Validates dimensions, size, and format
-
-**`resize_image(image, target_width=None, target_height=None)`**
-- Resizes image while maintaining aspect ratio
-- Handles single dimension or constrained resizing
-
-**`get_image_info(image)`**
-- Returns image properties (dimensions, channels, type)
-- Useful for debugging and analysis
-
-## Demo Script
-
-Run the demo to test the complete preprocessing and line detection pipeline:
-
+### 2. Install Dependencies
 ```bash
-python3 examples/preprocessing_demo.py
+pip install -r requirements.txt
 ```
 
-**Features:**
-- Preprocesses handwritten images for optimal OCR readiness
-- Detects and highlights individual text lines with bounding boxes
-- Automatically adapts to different handwriting sizes and layouts
+### 3. Launch the Application
+Choose the runner for your operating system:
+- **macOS/Linux**: Double-click `run_app.sh` (or run `./run_app.sh` in terminal)
+- **Windows**: Double-click `run_app.bat`
 
-**Requirements:**
-- Place a handwritten image at `examples/sample_images/handwritten_note.jpg`
-- Demo generates processed outputs in `examples/output/`:
-  - `original.jpg` - Original input image
-  - `preprocessed.jpg` - Binary processed image
-  - `lines_detected.jpg` - Image with text line bounding boxes
+The app will be available at `http://localhost:8000`.
 
-**Output:**
-The demo will display the number of detected text lines and save visual results showing green bounding boxes around each identified text line.
+---
 
-## Dependencies
+## 🛠️ Project Structure
 
-Install required packages:
+- `app.py`: The main FastHTML application and web interface.
+- `vlm/document_digitizer.py`: The core engine handling model loading and inference.
+- `requirements.txt`: Project dependencies.
+- `legacy/`: Historical preprocessing tools and experiments (kept for reference).
 
-```bash
-sudo apt update
-sudo apt install python3-opencv python3-numpy python3-matplotlib python3-pil python3-skimage python3-scipy
-```
+---
 
-## Dataset: https://huggingface.co/datasets/Teklia/IAM-line
-## Extra testing dataset: https://www.kaggle.com/datasets/nexdatafrank/14511-images-english-handwriting-ocr-data 
+## 🏗️ Technology Stack
+
+- **Core**: Python
+- **Frontend**: [FastHTML](https://fasthtml.answer.ai/) & HTMX
+- **VLM**: [Qwen2.5-VL-7B-Instruct](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct)
+- **Deep Learning**: PyTorch & HuggingFace Transformers
+- **Optimization**: BitsAndBytes (4-bit quantization)
+- **Document Handling**: PyMuPDF & Pandoc
+
+---
+
+## 📝 License
+
+This project is intended for research and personal digitization. Please refer to the Qwen2.5-VL model license for usage terms related to the underlying VLM.
+
+---
+
+*Ink2Pixel — Bridging the analog-digital divide.*
