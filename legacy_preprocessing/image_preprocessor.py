@@ -19,7 +19,6 @@ class ImagePreprocessor:
         
         gray = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
         
-        # Main processing chain
         processed = self.enhance_contrast(gray)
         processed = self.reduce_noise(processed, method='bilateral')
         processed = self.apply_threshold(processed, method='adaptive')
@@ -74,14 +73,11 @@ class ImagePreprocessor:
     
     def clean_binary_image(self, image: np.ndarray) -> np.ndarray:
         """Remove noise from binary image."""
-        # Remove salt-and-pepper noise
         cleaned = cv2.medianBlur(image, 5)
         
-        # Morphological opening to remove small noise
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_OPEN, kernel)
         
-        # Filter out tiny components
         num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(cleaned, connectivity=8)
         min_size = 10
         cleaned_image = np.zeros_like(cleaned)
@@ -90,7 +86,6 @@ class ImagePreprocessor:
             if stats[i, cv2.CC_STAT_AREA] >= min_size:
                 cleaned_image[labels == i] = 255
         
-        # Smooth text characters
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
         cleaned_image = cv2.morphologyEx(cleaned_image, cv2.MORPH_CLOSE, kernel)
         
@@ -107,7 +102,6 @@ class ImagePreprocessor:
         Returns:
             Normalized image
         """
-        # Resize while maintaining aspect ratio
         height, width = image.shape[:2]
         target_width, target_height = target_size
         
@@ -120,7 +114,6 @@ class ImagePreprocessor:
         
         resized = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_AREA)
         
-        # Create canvas and center the image
         canvas = np.zeros((target_height, target_width), dtype=np.uint8)
         if len(resized.shape) == 3:
             canvas = np.zeros((target_height, target_width, resized.shape[2]), dtype=np.uint8)

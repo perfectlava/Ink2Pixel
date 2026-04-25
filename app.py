@@ -4,7 +4,7 @@ import shutil
 import os
 from threading import Timer
 from web.core import app, UPLOAD_DIR, OUTPUT_DIR
-# Import routes to register them with the app
+
 import web.routes 
 
 def open_browser():

@@ -8,8 +8,8 @@ from learning import TinyOCR
 from dataset import OCRDataset
 from decoder import ctc_greedy_decode
 from datasets import load_dataset
-
 from randomize import handwriting_transforms
+
 
 # ---------- Collate function ----------
 def collate_fn(batch):
@@ -33,7 +33,6 @@ def collate_fn(batch):
 
 # ---------- Main ----------
 def main():
-    # GPU speedup
     torch.backends.cudnn.benchmark = True
 
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -99,7 +98,6 @@ def main():
             optimizer.step()
             total_loss += loss.item()
 
-            # decode first batch of epoch for quick monitoring
         if epoch % 5 == 0:
             model.eval()
             with torch.no_grad():
