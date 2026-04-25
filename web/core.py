@@ -15,7 +15,6 @@ OUTPUT_DIR = Path("outputs")
 UPLOAD_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-# Supported formats — (key, label, file extension, media type)
 FORMATS = [
     ("markdown",   "Markdown",   "md",    "text/markdown; charset=utf-8"),
     ("html",       "HTML",       "html",  "text/html; charset=utf-8"),

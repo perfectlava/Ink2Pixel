@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 
+
 def _logsumexp(*args):
     m = max(args)
     if m == float('-inf'):
@@ -9,7 +10,7 @@ def _logsumexp(*args):
 
 def ctc_greedy_decode(log_probs, idx2char, blank=0):
     """log_probs: (T, B, C). Returns list of strings."""
-    indices = log_probs.argmax(dim=2)  # (T, B)
+    indices = log_probs.argmax(dim=2) 
     results = []
     for b in range(indices.shape[1]):
         seq = indices[:, b].tolist()
@@ -27,7 +28,6 @@ def ctc_beam_search_decode(log_probs_1d, idx2char, beam_width=10, blank=0):
     T, C = log_probs_1d.shape
     NEG_INF = float('-inf')
 
-    # prefix (tuple of char indices) -> [log_prob_blank, log_prob_nonblank]
     beams = {(): [0.0, NEG_INF]}
 
     for t in range(T):
@@ -46,7 +46,6 @@ def ctc_beam_search_decode(log_probs_1d, idx2char, beam_width=10, blank=0):
                     b[0] = _logsumexp(b[0], pb + p, pnb + p)
                 else:
                     if prefix and prefix[-1] == c:
-                        # same last char: only blank-ending can extend cleanly
                         get(prefix + (c,))[1] = _logsumexp(get(prefix + (c,))[1], pb + p)
                         get(prefix)[1] = _logsumexp(get(prefix)[1], pnb + p)
                     else:

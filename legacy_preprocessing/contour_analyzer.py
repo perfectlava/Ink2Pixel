@@ -16,13 +16,12 @@ class ContourAnalyzer:
         height, width = image.shape
         horizontal_projection = np.sum(image == 255, axis=1)
         
-        # Estimate text size from projection data
         text_rows = np.where(horizontal_projection > 5)[0]
         if len(text_rows) > 0:
             total_text_height = text_rows[-1] - text_rows[0] + 1
-            estimated_line_height = total_text_height // 3 * 1.2  # 20% padding
+            estimated_line_height = total_text_height // 3 * 1.2  
         else:
-            estimated_line_height = 60  # fallback
+            estimated_line_height = 60  
         
         peaks = []
         threshold = np.max(horizontal_projection) * 0.6
@@ -36,7 +35,7 @@ class ContourAnalyzer:
                 peaks.append(i)
         
         filtered_peaks = []
-        min_distance = int(estimated_line_height * 0.6)  # Dynamic spacing
+        min_distance = int(estimated_line_height * 0.6)  
         
         for peak in peaks:
             if not filtered_peaks or peak - filtered_peaks[-1] >= min_distance:
@@ -45,11 +44,9 @@ class ContourAnalyzer:
         lines = []
         
         for i, peak in enumerate(filtered_peaks):
-            # Give more space above the line for dots, accents, etc.
-            y_start = max(0, int(peak - estimated_line_height * 0.6))  # 60% above
-            y_end = min(height, int(peak + estimated_line_height * 0.4))  # 40% below
+            y_start = max(0, int(peak - estimated_line_height * 0.6))  
+            y_end = min(height, int(peak + estimated_line_height * 0.4))  
             
-            # For the last line, extend to the bottom to avoid cutoff
             if i == len(filtered_peaks) - 1:
                 y_end = height
             

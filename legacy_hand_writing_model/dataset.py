@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import Dataset
 
+
 class OCRDataset(Dataset):
     def __init__(self, hf_dataset, char_to_idx, transform=None):
         self.ds = hf_dataset

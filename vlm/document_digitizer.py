@@ -58,15 +58,10 @@ class DocumentDigitizer:
         Safely enforces Markdown math delimiters.
         Crucially strips spaces just inside inline $ delimiters, as Pandoc fails to render `$ math $`.
         """
-        # Fix block math
         text = text.replace(r"\[", "$$").replace(r"\]", "$$")
         
-        # Replace \( ... \) with $...$
         text = re.sub(r"\\\(\s*(.*?)\s*\\\)", r"$\1$", text, flags=re.DOTALL)
         
-        # Safely fix models that output $ x = 2 $ with spaces.
-        # [^$\n]+? ensures we NEVER match across line breaks or across multiple equations,
-        # preventing the "runaway math block" bug that eats spaces in standard text.
         text = re.sub(r'\$\s+([^$\n]+?)\s+\$', r'$\1$', text)
         
         return text
@@ -103,7 +98,7 @@ class DocumentDigitizer:
 
         if image_path.lower().endswith(".pdf"):
             try:
-                import fitz  # PyMuPDF
+                import fitz  
             except ImportError:
                 raise ImportError("Processing PDFs requires PyMuPDF. Install via: pip install pymupdf")
             
@@ -126,10 +121,8 @@ class DocumentDigitizer:
             text = self._run_vlm(image_path, prompt)
             extracted_texts.append(text)
 
-        # Join pages with a unique internal token
         full_document_text = "\n\n=== PAGE BREAK ===\n\n".join(extracted_texts)
 
-        # Apply the fail-safe math delimiter fix
         if output_format != "latex":
             full_document_text = self._fix_math_delimiters(full_document_text)
 
@@ -143,11 +136,9 @@ class DocumentDigitizer:
             try:
                 import pypandoc
                 
-                # Use standard Native OpenXML to force Microsoft Word to insert a hard page break
                 docx_page_break = '\n\n```{=openxml}\n<w:p><w:r><w:br w:type="page"/></w:r></w:p>\n```\n\n'
                 pandoc_text = text.replace("=== PAGE BREAK ===", docx_page_break)
                 
-                # Format is explicitly set to 'markdown' so Pandoc natively expects $ math blocks
                 pypandoc.convert_text(pandoc_text, 'docx', format='markdown', outputfile=file_path)
                 print(f"Successfully saved cleanly formatted Word document with rendered Math to {file_path}")
                 
@@ -174,7 +165,6 @@ class DocumentDigitizer:
             file_path = f"{base_filename}.tex"
             body_text = text.replace("=== PAGE BREAK ===", "\n\n\\newpage\n\n")
             
-            # Python natively wraps the completely stitched multi-page text in the preamble
             latex_document = (
                 "\\documentclass{article}\n"
                 "\\usepackage{amsmath, amssymb}\n"
